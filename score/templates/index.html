@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI ChatBot</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: Roboto, Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body.light-mode {
+            background-color: #f9f9f9;
+            color: #000;
+        }
+
+        body.dark-mode {
+            background-color: #1e1e1e;
+            color: #fff;
+        }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .chat-header {
+            background-color: #318CFF;
+            color: white;
+            padding: 1% 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-direction: row;
+        }
+
+        .chat-header h2 {
+            margin: 0;
+            flex: 1;
+        }
+
+        .navigation-buttons {
+            display: flex;
+            align-items: center;
+        }
+
+        .navigate-button, .dark-mode-toggle {
+            cursor: pointer;
+            background-color: transparent;
+            border: none;
+            font-weight: bold;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.3s;
+            margin-left: 20px; /* Space between the buttons */
+            padding: 5px 10px; /* Padding around the content */
+        }
+
+        .navigate-button i {
+            font-size: 16px; /* Size of the icon */
+            margin-right: 6px; /* Space between the icon and the text */
+        }
+
+        .navigate-button span {
+            font-size: 20px; /* Size of the text */
+        }
+
+        .navigate-button:hover, .dark-mode-toggle:hover {
+            color: #ddd;
+        }
+
+        .dark-mode-toggle {
+            font-size: 24px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            padding: 2.5% 12.5%;
+            overflow-y: auto;
+            border-bottom: 1px solid #ddd;
+            transition: border-color 0.3s;
+            /* Custom scrollbar styling */
+            scrollbar-width: thin;
+            scrollbar-color: #888 #ccc;
+        }
+
+        .chat-messages::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background-color: #888;
+            border-radius: 4px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background-color: #ccc;
+        }
+
+        .chat-input {
+            display: flex;
+            padding: 10px 20px;
+            border-top: 1px solid #ddd;
+            justify-content: center;
+            
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 10px;
+            border: 2.5px solid #ddd;
+            border-radius: 50px;
+            margin-right: 10px;
+            font-size: 15px;
+            max-width: 75%;
+            min-width: 0;
+        }
+
+        .chat-input button {
+            padding: 10px 20px;
+            border: none;
+            background-color: #318CFF;
+            color: white;
+            cursor: pointer;
+            border-radius: 25px;
+            font-size: 15px;
+        }
+
+        .chat-input button:hover {
+            background-color: #318CFF;
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            max-width: 80%;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .message.user {
+            background-color: #deeeff;
+            align-self: flex-end;
+        }
+
+        .message.bot {
+            background-color: #ebe2cc;
+            align-self: flex-start;
+        }
+
+        /* Dark mode styling */
+        body.dark-mode .chat-header {
+            background-color: #333;
+        }
+
+        body.dark-mode .chat-messages {
+            border-bottom: 1px solid #444;
+        }
+
+        body.dark-mode .chat-input {
+            border-top: 1px solid #444;
+        }
+
+        body.dark-mode .chat-input input {
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #444;
+        }
+
+        body.dark-mode .chat-input button {
+            background-color: #555;
+        }
+
+        body.dark-mode .chat-input button:hover {
+            background-color: #666;
+        }
+
+        body.dark-mode .message.user {
+            background-color: #4a4a4a;
+            color: #fff;
+        }
+
+        body.dark-mode .message.bot {
+            background-color: #333;
+            color: #fff;
+        }
+
+        /* Scroll-to-top button styling */
+        .scroll-to-top {
+            position: fixed;
+            bottom: 15%; /* Position it in the middle vertically */
+            right: 50%; /* Adjust the horizontal positioning */
+            background-color: #666;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            transition: opacity 0.5s, visibility 0.9s;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(100%);
+        }
+
+        .scroll-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+    </style>
+</head>
+<body class="dark-mode">
+    <div class="chat-container">
+        <div class="chat-header">
+            <i class="fas fa-robot" style="font-size: 25px; margin-right: 7.5px;"></i> <!-- AI-related icon -->
+            <h2>AI ChatBOT</h2>
+            <div class="navigation-buttons">
+                <button class="navigate-button" onclick="navigateToAnotherPage()" title="Go Back">
+                    <i id="navigate-icon" class="fas fa-link"></i> <!-- Updated icon -->
+                    <span>Virt Cloud</span> <!-- Text inside the button -->
+                </button>
+                <button class="dark-mode-toggle" onclick="toggleDarkMode()" title="Toggle Dark Mode">
+                    <i id="dark-mode-icon" class="fas fa-sun"></i> <!-- Default dark mode icon -->
+                </button>
+            </div>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+            <!-- Chat messages will be appended here -->
+        </div>
+        <div class="chat-input">
+            <input type="text" id="user-input" placeholder="Message ChatBOT..." onkeydown="checkEnter(event)" />
+            <button onclick="sendMessage()">Send</button>
+            <button onclick="cancelProcess()" style="margin-left: 0.7%;">Cancel</button> 
+        </div>
+        <button class="scroll-to-top" onclick="scrollToBottom()">
+            <i class="fas fa-chevron-down"></i>
+        </button>
+    </div>
+    <script>
+        function appendMessage(message, sender) {
+            const chatMessages = document.getElementById('chat-messages');
+            const messageElement = document.createElement('div');
+            messageElement.className = 'message ' + sender;
+            messageElement.textContent = message;
+            chatMessages.appendChild(messageElement);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const userInput = document.getElementById('user-input');
+            const message = userInput.value;
+            if (message.trim() !== '') {
+                appendMessage(message, 'user');
+                userInput.value = '';
+
+                // Send the message to the backend
+                const response = await fetch('/chat/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken') // Django CSRF token
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+
+                const data = await response.json();
+                const botMessage = data.message || 'Error: No response from the bot';
+
+                // Append the bot's response to the chat
+                appendMessage(botMessage, 'bot');
+            }
+        }
+
+        function checkEnter(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function toggleDarkMode() {
+            const body = document.body;
+            const currentMode = body.className;
+            const newMode = currentMode === 'light-mode' ? 'dark-mode' : 'light-mode';
+            body.className = newMode;
+            const icon = document.getElementById('dark-mode-icon');
+            icon.className = newMode === 'light-mode' ? 'fas fa-moon' : 'fas fa-sun';
+        }
+
+        function scrollToBottom() {
+            const chatMessages = document.getElementById('chat-messages');
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function handleScroll() {
+            const chatMessages = document.getElementById('chat-messages');
+            const scrollToTopButton = document.querySelector('.scroll-to-top');
+            const isAtBottom = chatMessages.scrollHeight - chatMessages.scrollTop <= chatMessages.clientHeight + 10;
+
+            if (chatMessages.scrollTop > 100 && !isAtBottom) {
+                scrollToTopButton.classList.add('visible');
+            } else {
+                scrollToTopButton.classList.remove('visible');
+            }
+        }
+
+        document.getElementById('chat-messages').addEventListener('scroll', handleScroll);
+
+        function navigateToAnotherPage() {
+            // Placeholder function for navigation
+            window.location.href = 'anotherpage.html'; // Change 'anotherpage.html' to the actual page you want to navigate to
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        async function cancelProcess() {
+            try {
+                const response = await fetch('/cancel/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken') // Django CSRF token
+                    }
+                });
+
+                const data = await response.json();
+                const message = data.message || 'Error: No response from the server';
+
+                // Optionally, display a message to the user
+                alert(message);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to cancel the process.');
+            }
+        }
+
+    </script>
+</body>
+</html>
