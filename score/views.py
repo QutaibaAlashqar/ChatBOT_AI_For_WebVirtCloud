@@ -46,7 +46,7 @@ def chat_with_bot(request):
 
             try:
                 # Send the user message and close stdin
-                stdout, stderr = process.communicate(input=user_message, timeout=1000)
+                stdout, stderr = process.communicate(input=user_message, timeout=3000)
             except subprocess.TimeoutExpired:
                 process.kill()
                 stdout, stderr = process.communicate()
@@ -60,6 +60,11 @@ def chat_with_bot(request):
 
             bot_message = filtered_output.strip() or "No output from interpreter."
             print(f"Bot message: {bot_message}")
+
+            # Check if bot message contains the question
+            if "Would you like to run this code? (y/n)" in bot_message:
+                return JsonResponse({'message': bot_message, 'run_code_prompt': True})
+
             return JsonResponse({'message': bot_message})
 
         except FileNotFoundError:
@@ -71,6 +76,38 @@ def chat_with_bot(request):
 
     else:
         return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
+@csrf_exempt
+def handle_code_execution(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        user_choice = data.get('choice')
+        
+        if user_choice == 'y':
+            # Read the PID from the file
+            try:
+                with open(PID_FILE, 'r') as f:
+                    pid = int(f.read().strip())
+
+                # Send a continue signal (e.g., SIGCONT) or other appropriate signal to the process
+                os.kill(pid, signal.SIGCONT)
+
+                return JsonResponse({'message': 'Code execution continued.'})
+
+            except FileNotFoundError:
+                return JsonResponse({'message': 'No process found to continue.'})
+            except ProcessLookupError:
+                return JsonResponse({'message': 'Process not found.'})
+            except Exception as e:
+                return JsonResponse({'message': f'Error: {str(e)}'})
+
+        elif user_choice == 'n':
+            return cancel_process(request)  # Reuse the existing cancel_process function
+
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
 
 @csrf_exempt
 def cancel_process(request):

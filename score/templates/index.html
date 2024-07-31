@@ -227,146 +227,214 @@
             opacity: 1;
             visibility: visible;
         }
-    </style>
-</head>
-<body class="dark-mode">
-    <div class="chat-container">
-        <div class="chat-header">
-            <i class="fas fa-robot" style="font-size: 25px; margin-right: 7.5px;"></i> <!-- AI-related icon -->
-            <h2>AI ChatBOT</h2>
-            <div class="navigation-buttons">
-                <button class="navigate-button" onclick="navigateToAnotherPage()" title="Go Back">
-                    <i id="navigate-icon" class="fas fa-link"></i> <!-- Updated icon -->
-                    <span>Virt Cloud</span> <!-- Text inside the button -->
-                </button>
-                <button class="dark-mode-toggle" onclick="toggleDarkMode()" title="Toggle Dark Mode">
-                    <i id="dark-mode-icon" class="fas fa-sun"></i> <!-- Default dark mode icon -->
-                </button>
-            </div>
-        </div>
-        <div class="chat-messages" id="chat-messages">
-            <!-- Chat messages will be appended here -->
-        </div>
-        <div class="chat-input">
-            <input type="text" id="user-input" placeholder="Message ChatBOT..." onkeydown="checkEnter(event)" />
-            <button onclick="sendMessage()">Send</button>
-            <button onclick="cancelProcess()" style="margin-left: 0.7%;">Cancel</button> 
-        </div>
-        <button class="scroll-to-top" onclick="scrollToBottom()">
-            <i class="fas fa-chevron-down"></i>
-        </button>
-    </div>
-    <script>
-        function appendMessage(message, sender) {
-            const chatMessages = document.getElementById('chat-messages');
-            const messageElement = document.createElement('div');
-            messageElement.className = 'message ' + sender;
-            messageElement.textContent = message;
-            chatMessages.appendChild(messageElement);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+
+        .run-code-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
         }
 
-        async function sendMessage() {
-            const userInput = document.getElementById('user-input');
-            const message = userInput.value;
-            if (message.trim() !== '') {
-                appendMessage(message, 'user');
-                userInput.value = '';
+        .run-code-buttons button {
+            padding: 10px 20px;
+            border: none;
+            background-color: #318CFF;
+            color: white;
+            cursor: pointer;
+            border-radius: 25px;
+            font-size: 15px;
+        }
 
-                // Send the message to the backend
-                const response = await fetch('/chat/', {
+        .run-code-buttons button:hover {
+            background-color: #1e70d1;
+        }
+
+    </style>
+</head>
+    <body class="dark-mode">
+        <div class="chat-container">
+            <div class="chat-header">
+                <i class="fas fa-robot" style="font-size: 25px; margin-right: 7.5px;"></i> <!-- AI-related icon -->
+                <h2>AI ChatBOT</h2>
+                <div class="navigation-buttons">
+                    <button class="navigate-button" onclick="navigateToAnotherPage()" title="Go Back">
+                        <i id="navigate-icon" class="fas fa-link"></i> <!-- Updated icon -->
+                        <span>Virt Cloud</span> <!-- Text inside the button -->
+                    </button>
+                    <button class="dark-mode-toggle" onclick="toggleDarkMode()" title="Toggle Dark Mode">
+                        <i id="dark-mode-icon" class="fas fa-sun"></i> <!-- Default dark mode icon -->
+                    </button>
+                </div>
+            </div>
+            <div class="chat-messages" id="chat-messages">
+                <!-- Chat messages will be appended here -->
+            </div>
+            <div class="chat-input">
+                <input type="text" id="user-input" placeholder="Message ChatBOT..." onkeydown="checkEnter(event)" />
+                <button onclick="sendMessage()">Send</button>
+                <button onclick="cancelProcess()" style="margin-left: 0.7%;">Cancel</button> 
+            </div>
+            <button class="scroll-to-top" onclick="scrollToBottom()">
+                <i class="fas fa-chevron-down"></i>
+            </button>
+        </div>
+
+        <script>
+            function appendMessage(message, sender) {
+                const chatMessages = document.getElementById('chat-messages');
+                const messageElement = document.createElement('div');
+                messageElement.className = 'message ' + sender;
+                messageElement.textContent = message;
+                chatMessages.appendChild(messageElement);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            
+            async function sendMessage() {
+                const userInput = document.getElementById('user-input');
+                const message = userInput.value;
+                if (message.trim() !== '') {
+                    appendMessage(message, 'user');
+                    userInput.value = '';
+
+                    // Send the message to the backend
+                    const response = await fetch('/chat/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken') // Django CSRF token
+                        },
+                        body: JSON.stringify({ message: message })
+                    });
+
+                    const data = await response.json();
+                    const botMessage = data.message || 'Error: No response from the bot';
+
+                    // Append the bot's response to the chat
+                    appendMessage(botMessage, 'bot');
+
+                    if (data.run_code_prompt) {
+                        appendRunCodeButtons();
+                    }
+                }
+            }
+
+            function appendRunCodeButtons() {
+                const chatMessages = document.getElementById('chat-messages');
+                const buttonsContainer = document.createElement('div');
+                buttonsContainer.className = 'run-code-buttons';
+
+                const yesButton = document.createElement('button');
+                yesButton.textContent = 'Yes';
+                yesButton.onclick = () => handleRunCodeChoice('y');
+
+                const noButton = document.createElement('button');
+                noButton.textContent = 'No';
+                noButton.onclick = () => handleRunCodeChoice('n');
+
+                buttonsContainer.appendChild(yesButton);
+                buttonsContainer.appendChild(noButton);
+                chatMessages.appendChild(buttonsContainer);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            async function handleRunCodeChoice(choice) {
+                const response = await fetch('/handle_code_execution/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': getCookie('csrftoken') // Django CSRF token
                     },
-                    body: JSON.stringify({ message: message })
-                });
-
-                const data = await response.json();
-                const botMessage = data.message || 'Error: No response from the bot';
-
-                // Append the bot's response to the chat
-                appendMessage(botMessage, 'bot');
-            }
-        }
-
-        function checkEnter(event) {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                sendMessage();
-            }
-        }
-
-        function toggleDarkMode() {
-            const body = document.body;
-            const currentMode = body.className;
-            const newMode = currentMode === 'light-mode' ? 'dark-mode' : 'light-mode';
-            body.className = newMode;
-            const icon = document.getElementById('dark-mode-icon');
-            icon.className = newMode === 'light-mode' ? 'fas fa-moon' : 'fas fa-sun';
-        }
-
-        function scrollToBottom() {
-            const chatMessages = document.getElementById('chat-messages');
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        function handleScroll() {
-            const chatMessages = document.getElementById('chat-messages');
-            const scrollToTopButton = document.querySelector('.scroll-to-top');
-            const isAtBottom = chatMessages.scrollHeight - chatMessages.scrollTop <= chatMessages.clientHeight + 10;
-
-            if (chatMessages.scrollTop > 100 && !isAtBottom) {
-                scrollToTopButton.classList.add('visible');
-            } else {
-                scrollToTopButton.classList.remove('visible');
-            }
-        }
-
-        document.getElementById('chat-messages').addEventListener('scroll', handleScroll);
-
-        function navigateToAnotherPage() {
-            // Placeholder function for navigation
-            window.location.href = 'anotherpage.html'; // Change 'anotherpage.html' to the actual page you want to navigate to
-        }
-
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
-
-        async function cancelProcess() {
-            try {
-                const response = await fetch('/cancel/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken') // Django CSRF token
-                    }
+                    body: JSON.stringify({ choice: choice })
                 });
 
                 const data = await response.json();
                 const message = data.message || 'Error: No response from the server';
 
-                // Optionally, display a message to the user
-                alert(message);
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Failed to cancel the process.');
-            }
-        }
+                appendMessage(message, 'bot');
 
-    </script>
-</body>
+                // Optionally, remove the buttons after the choice is made
+                document.querySelector('.run-code-buttons').remove();
+            }
+
+
+
+            function checkEnter(event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    sendMessage();
+                }
+            }
+
+            function toggleDarkMode() {
+                const body = document.body;
+                const currentMode = body.className;
+                const newMode = currentMode === 'light-mode' ? 'dark-mode' : 'light-mode';
+                body.className = newMode;
+                const icon = document.getElementById('dark-mode-icon');
+                icon.className = newMode === 'light-mode' ? 'fas fa-moon' : 'fas fa-sun';
+            }
+
+            function scrollToBottom() {
+                const chatMessages = document.getElementById('chat-messages');
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            function handleScroll() {
+                const chatMessages = document.getElementById('chat-messages');
+                const scrollToTopButton = document.querySelector('.scroll-to-top');
+                const isAtBottom = chatMessages.scrollHeight - chatMessages.scrollTop <= chatMessages.clientHeight + 10;
+
+                if (chatMessages.scrollTop > 100 && !isAtBottom) {
+                    scrollToTopButton.classList.add('visible');
+                } else {
+                    scrollToTopButton.classList.remove('visible');
+                }
+            }
+
+            document.getElementById('chat-messages').addEventListener('scroll', handleScroll);
+
+            function navigateToAnotherPage() {
+                // Placeholder function for navigation
+                window.location.href = 'anotherpage.html'; // Change 'anotherpage.html' to the actual page you want to navigate to
+            }
+
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+
+            async function cancelProcess() {
+                try {
+                    const response = await fetch('/cancel/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken') // Django CSRF token
+                        }
+                    });
+
+                    const data = await response.json();
+                    const message = data.message || 'Error: No response from the server';
+
+                    // Optionally, display a message to the user
+                    alert(message);
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Failed to cancel the process.');
+                }
+            }
+
+        </script>
+    </body>
 </html>
