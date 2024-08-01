@@ -155,28 +155,32 @@ def filter_output(output):
 
     return "\n".join(filtered_lines)
 
+
+
 def extract_command_from_message(message):
     """
-    Extract the command from the bot's message. 
-    Assumes command is included in the message and is before the prompt.
+    Extract the command from the bot's message.
+    Assumes the command is included in the message and is directly before the prompt.
     """
     lines = message.splitlines()
     command_lines = []
+    prompt_found = False
 
-    # Find the line that contains the prompt message
-    prompt_index = -1
-    for i, line in enumerate(lines):
+    # Traverse the lines in reverse order to find the prompt first and then collect command lines
+    for line in reversed(lines):
         if 'Would you like to run this code? (y/n)' in line:
-            prompt_index = i
-            break
+            prompt_found = True
+        elif prompt_found:
+            stripped_line = line.strip()
+            if stripped_line:
+                command_lines.append(stripped_line)
+            else:
+                if command_lines:
+                    break
 
-    if prompt_index == -1:
-        return ""  # Prompt message not found
-
-    # Collect all lines before the prompt message
-    command_lines = lines[:prompt_index]
+    # Since we traversed in reverse, reverse command_lines to get the correct order
+    command_lines.reverse()
 
     # Join the command lines and strip leading/trailing whitespace
     command = "\n".join(command_lines).strip()
     return command
-
