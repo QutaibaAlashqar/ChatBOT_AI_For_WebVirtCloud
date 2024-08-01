@@ -279,7 +279,9 @@
             </button>
         </div>
 
+
         <script>
+
             function appendMessage(message, sender) {
                 const chatMessages = document.getElementById('chat-messages');
                 const messageElement = document.createElement('div');
@@ -310,6 +312,11 @@
                     const data = await response.json();
                     const botMessage = data.message || 'Error: No response from the bot';
 
+                    // Store session_id if available
+                    if (data.session_id) {
+                        window.sessionStorage.setItem('session_id', data.session_id);
+                    }
+                    
                     // Append the bot's response to the chat
                     appendMessage(botMessage, 'bot');
 
@@ -318,6 +325,8 @@
                     }
                 }
             }
+
+
 
             function appendRunCodeButtons() {
                 const chatMessages = document.getElementById('chat-messages');
@@ -339,25 +348,27 @@
             }
 
             async function handleRunCodeChoice(choice) {
+                const sessionId = window.sessionStorage.getItem('session_id');  // Store the session ID in session storage
                 const response = await fetch('/handle_code_execution/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': getCookie('csrftoken') // Django CSRF token
                     },
-                    body: JSON.stringify({ choice: choice })
+                    body: JSON.stringify({ choice: choice, session_id: sessionId })
                 });
 
                 const data = await response.json();
                 const message = data.message || 'Error: No response from the server';
 
                 appendMessage(message, 'bot');
-
+                
                 // Optionally, remove the buttons after the choice is made
-                document.querySelector('.run-code-buttons').remove();
+                const buttonsContainer = document.querySelector('.run-code-buttons');
+                if (buttonsContainer) {
+                    buttonsContainer.remove();
+                }
             }
-
-
 
             function checkEnter(event) {
                 if (event.key === 'Enter') {

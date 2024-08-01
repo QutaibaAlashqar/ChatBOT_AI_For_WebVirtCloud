@@ -1,13 +1,17 @@
 import json
 import os
 import subprocess
-import signal
+import uuid
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 
-FLAG_FILE = '/tmp/llama_ready.flag'
-PID_FILE = '/tmp/interpreter_pid.txt'
+# A dictionary to keep track of subprocesses and commands
+processes = {}
+commands = {}
+
+# Define the FLAG_FILE path
+FLAG_FILE = '/tmp/llama_ready.flag'  # Update this path as necessary
 
 def index(request):
     return render(request, 'index.html')
@@ -25,32 +29,28 @@ def chat_with_bot(request):
         print(f"User message: {user_message}")
 
         try:
-            # Command to start the interpreter process
-            command = [
-                '/home/ozgur-ent/Desktop/ChatBotAI/open-interpreter/venv39/bin/interpreter',
-                '--local', '--llama3'
-            ]
+            # Generate a unique session ID (or use a better unique identifier)
+            session_id = request.session.session_key or str(uuid.uuid4())
 
-            # Open the interpreter process
-            process = subprocess.Popen(
-                command,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
-            )
+            # If a process exists for this session, use it; otherwise, create a new one
+            if session_id in processes:
+                process = processes[session_id]
+            else:
+                command = [
+                    '/home/ozgur-ent/Desktop/ChatBotAI/open-interpreter/venv39/bin/interpreter',
+                    '--local', '--llama3'
+                ]
+                process = subprocess.Popen(
+                    command,
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True
+                )
+                processes[session_id] = process
 
-            # Save the PID to a file
-            with open(PID_FILE, 'w') as f:
-                f.write(str(process.pid))
-
-            try:
-                # Send the user message and close stdin
-                stdout, stderr = process.communicate(input=user_message, timeout=3000)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                stdout, stderr = process.communicate()
-                return JsonResponse({'message': "Error: Request timed out."})
+            # Send the user message to the process
+            stdout, stderr = process.communicate(input=user_message, timeout=3000)
 
             # Filter out unwanted text
             filtered_output = filter_output(stdout)
@@ -63,7 +63,10 @@ def chat_with_bot(request):
 
             # Check if bot message contains the question
             if "Would you like to run this code? (y/n)" in bot_message:
-                return JsonResponse({'message': bot_message, 'run_code_prompt': True})
+                # Extract the command from the bot message
+                command_to_run = extract_command_from_message(bot_message)
+                commands[session_id] = command_to_run  # Store the command for this session
+                return JsonResponse({'message': bot_message, 'run_code_prompt': True, 'session_id': session_id})
 
             return JsonResponse({'message': bot_message})
 
@@ -77,33 +80,39 @@ def chat_with_bot(request):
     else:
         return JsonResponse({'error': 'Invalid request method'}, status=400)
 
-
-@csrf_exempt
 def handle_code_execution(request):
     if request.method == 'POST':
         data = json.loads(request.body)
         user_choice = data.get('choice')
-        
+        session_id = data.get('session_id')
+
         if user_choice == 'y':
-            # Read the PID from the file
-            try:
-                with open(PID_FILE, 'r') as f:
-                    pid = int(f.read().strip())
+            if session_id in commands:
+                command_to_run = commands.pop(session_id)
+                
+                # Log the command being executed
+                print(f"Attempting to execute command: {command_to_run}")
 
-                # Send a continue signal (e.g., SIGCONT) or other appropriate signal to the process
-                os.kill(pid, signal.SIGCONT)
-
-                return JsonResponse({'message': 'Code execution continued.'})
-
-            except FileNotFoundError:
-                return JsonResponse({'message': 'No process found to continue.'})
-            except ProcessLookupError:
-                return JsonResponse({'message': 'Process not found.'})
-            except Exception as e:
-                return JsonResponse({'message': f'Error: {str(e)}'})
-
+                try:
+                    result = subprocess.run(command_to_run, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True, shell=True)
+                    output = result.stdout
+                    error = result.stderr
+                    if error:
+                        print(f"Subprocess stderr: {error.strip()}")
+                    bot_message = output.strip() or "No output from command."
+                    print(f"Bot message: {bot_message}")
+                    return JsonResponse({'message': bot_message})
+                except subprocess.CalledProcessError as e:
+                    print(f"CalledProcessError: {str(e)}")
+                    return JsonResponse({'message': f"Error executing command: {str(e)}"}, status=500)
+                except Exception as e:
+                    print(f'Unexpected error: {str(e)}')
+                    return JsonResponse({'message': f'Unexpected error: {str(e)}'}, status=500)
+            else:
+                return JsonResponse({'message': 'No command found for this session.'}, status=400)
+        
         elif user_choice == 'n':
-            return cancel_process(request)  # Reuse the existing cancel_process function
+            return cancel_process(request)
 
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
@@ -113,22 +122,18 @@ def handle_code_execution(request):
 def cancel_process(request):
     if request.method == 'POST':
         try:
-            # Read the PID from the file
-            with open(PID_FILE, 'r') as f:
-                pid = int(f.read().strip())
+            data = json.loads(request.body)
+            session_id = data.get('session_id')
 
-            # Terminate the process
-            os.kill(pid, signal.SIGINT)
+            if session_id in processes:
+                process = processes[session_id]
+                process.terminate()
+                process.wait()
+                del processes[session_id]
+                return JsonResponse({'message': 'Process terminated successfully.'})
+            else:
+                return JsonResponse({'message': 'No process found to terminate.'})
 
-            # Remove the PID file
-            os.remove(PID_FILE)
-
-            return JsonResponse({'message': 'Process terminated successfully.'})
-
-        except FileNotFoundError:
-            return JsonResponse({'message': 'No process found to terminate.'})
-        except ProcessLookupError:
-            return JsonResponse({'message': 'Process not found.'})
         except Exception as e:
             return JsonResponse({'message': f'Error: {str(e)}'})
 
@@ -149,3 +154,29 @@ def filter_output(output):
             is_output_section = True
 
     return "\n".join(filtered_lines)
+
+def extract_command_from_message(message):
+    """
+    Extract the command from the bot's message. 
+    Assumes command is included in the message and is before the prompt.
+    """
+    lines = message.splitlines()
+    command_lines = []
+
+    # Find the line that contains the prompt message
+    prompt_index = -1
+    for i, line in enumerate(lines):
+        if 'Would you like to run this code? (y/n)' in line:
+            prompt_index = i
+            break
+
+    if prompt_index == -1:
+        return ""  # Prompt message not found
+
+    # Collect all lines before the prompt message
+    command_lines = lines[:prompt_index]
+
+    # Join the command lines and strip leading/trailing whitespace
+    command = "\n".join(command_lines).strip()
+    return command
+
