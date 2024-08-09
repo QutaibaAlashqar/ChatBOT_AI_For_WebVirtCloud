@@ -13,26 +13,6 @@
 
 
 
-from django.apps import AppConfig
-
-class ScoreConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'score'
-
-
-
-###
-######
-#########
-############
-############### Secend Version 
-############
-#########
-######
-###
-
-
-
 """
 
 
@@ -79,3 +59,27 @@ class ScoreConfig(AppConfig):
 
 
 """
+
+
+###
+######
+#########
+############
+############### Secend Version 
+############
+#########
+######
+###
+
+
+
+
+
+
+from django.apps import AppConfig
+
+class ScoreConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'score'
+
+
