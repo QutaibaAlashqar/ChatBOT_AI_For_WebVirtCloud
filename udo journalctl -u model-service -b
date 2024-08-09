@@ -1,0 +1,11 @@
+[0;1;32m●[0m model-service.service - Model Service
+     Loaded: loaded (/etc/systemd/system/model-service.service; disabled; vendor preset: enabled)
+     Active: [0;1;32mactive (running)[0m since Fri 2024-08-02 12:53:18 +03; 7s ago
+   Main PID: 351398 (python)
+      Tasks: 2 (limit: 18893)
+     Memory: 173.7M
+     CGroup: /system.slice/model-service.service
+             ├─351398 /home/ozgur-ent/Desktop/ChatBotAI/venv/bin/python /home/ozgur-ent/Desktop/ChatBotAI/chatbot_ai_part/manage.py runserver 0.0.0.0:8005
+             └─351403 /home/ozgur-ent/Desktop/ChatBotAI/open-interpreter/venv39/bin/python3.9 /home/ozgur-ent/Desktop/ChatBotAI/open-interpreter/venv39/bin/interpreter --local --llama3
+
+Ağu 02 12:53:18 ozgurent systemd[1]: Started Model Service.

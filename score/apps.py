@@ -1,3 +1,41 @@
+
+
+
+###
+######
+#########
+############
+############### First Version 
+############
+#########
+######
+###
+
+
+
+from django.apps import AppConfig
+
+class ScoreConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'score'
+
+
+
+###
+######
+#########
+############
+############### Secend Version 
+############
+#########
+######
+###
+
+
+
+"""
+
+
 from django.apps import AppConfig
 import subprocess
 import os
@@ -37,3 +75,7 @@ class ScoreConfig(AppConfig):
     @staticmethod
     def get_model_process():
         return ScoreConfig.model_process
+
+
+
+"""
